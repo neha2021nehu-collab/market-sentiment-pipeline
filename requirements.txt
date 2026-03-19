@@ -1,0 +1,24 @@
+# Scraping
+playwright>=1.44.0
+beautifulsoup4>=4.12.0
+praw>=7.7.0
+yfinance>=0.2.40
+requests>=2.32.0
+fake-useragent>=1.5.0
+
+# Data
+pandas>=2.0.0
+python-dotenv>=1.0.0
+
+# Sentiment
+vaderSentiment>=3.3.2
+nltk>=3.8.0
+
+# Storage
+pymongo>=4.7.0
+psycopg2-binary>=2.9.0
+sqlalchemy>=2.0.0
+
+# Scheduling / Utils
+schedule>=1.2.0
+loguru>=0.7.0

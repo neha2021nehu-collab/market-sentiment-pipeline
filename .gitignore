@@ -1,0 +1,27 @@
+# Environment — never commit secrets
+.env
+
+# Scraped data — raw output stays local
+data/raw/
+data/cleaned/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+*.egg-info/
+
+# Virtual environment
+project1/
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
