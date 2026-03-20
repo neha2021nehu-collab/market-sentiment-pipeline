@@ -1,29 +1,32 @@
 """
-Entry point for the full pipeline.
-Currently wires Source A only — Sources B and C will be added in next sessions.
+Entry point for the full Sentiment Pulse pipeline.
 
 Usage:
-  python main.py            # run full pipeline
-  python main.py --source a # run only Source A
+  python main.py            # run all sources
+  python main.py --source a # Source A only (news RSS)
+  python main.py --source b # Source B only (StockTwits social)
+  python main.py --source c # Source C only (Yahoo Finance) — coming soon
 """
 
 import asyncio
 import argparse
 from loguru import logger
 from scrapers.source_a_playwright import run as run_source_a
+from scrapers.source_b_reddit import run as run_source_b
 
 
 async def main(source: str = "all"):
     logger.info(f"=== Sentiment Pulse Pipeline | source={source} ===")
 
     if source in ("all", "a"):
-        logger.info("--- Source A: Reuters Technology ---")
+        logger.info("--- Source A: News RSS + Playwright ---")
         articles = await run_source_a()
         logger.success(f"Source A complete: {len(articles)} articles")
 
-    # Source B and C placeholders — coming next
     if source in ("all", "b"):
-        logger.warning("Source B (Reddit) not yet implemented")
+        logger.info("--- Source B: StockTwits Social Sentiment ---")
+        posts = run_source_b()
+        logger.success(f"Source B complete: {len(posts)} posts")
 
     if source in ("all", "c"):
         logger.warning("Source C (Yahoo Finance) not yet implemented")
