@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Market Sentiment Pulse</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:       #0a0a0f;
+    --surface:  #111118;
+    --border:   #1e1e2e;
+    --accent:   #00ff88;
+    --red:      #ff4466;
+    --amber:    #ffaa00;
+    --text:     #e8e8f0;
+    --muted:    #5a5a72;
+    --bull:     #00ff88;
+    --bear:     #ff4466;
+    --neu:      #5a5a72;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,136,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,136,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  header {
+    position: relative;
+    z-index: 1;
+    padding: 2rem 2.5rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+
+  .logo-title {
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  .logo-title span { color: var(--accent); }
+
+  .logo-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+  }
+
+  .live-dot {
+    width: 7px; height: 7px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  main {
+    position: relative;
+    z-index: 1;
+    padding: 2rem 2.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* ── Stat cards ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.4rem 1.6rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .stat-card:hover { border-color: var(--accent); }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .stat-card.bull::before { background: var(--bull); }
+  .stat-card.bear::before { background: var(--bear); }
+  .stat-card.neu::before  { background: var(--amber); }
+  .stat-card.info::before { background: #6688ff; }
+
+  .stat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.6rem;
+  }
+
+  .stat-value {
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+
+  .stat-card.bull .stat-value { color: var(--bull); }
+  .stat-card.bear .stat-value { color: var(--bear); }
+  .stat-card.neu  .stat-value { color: var(--amber); }
+  .stat-card.info .stat-value { color: #6688ff; }
+
+  .stat-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin-top: 0.4rem;
+  }
+
+  /* ── Main grid ── */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    animation: fadeUp 0.6s ease 0.1s both;
+  }
+
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    animation: fadeUp 0.6s ease 0.2s both;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: border-color 0.2s;
+  }
+
+  .panel:hover { border-color: rgba(0,255,136,0.2); }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.2rem;
+  }
+
+  .panel-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ── Ticker selector ── */
+  .ticker-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .pill {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.05em;
+  }
+
+  .pill:hover  { border-color: var(--accent); color: var(--accent); }
+  .pill.active { border-color: var(--accent); background: rgba(0,255,136,0.1); color: var(--accent); }
+
+  /* ── Sentiment bar ── */
+  .sentiment-bar-wrap { margin-bottom: 1rem; }
+
+  .sentiment-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin-bottom: 0.4rem;
+  }
+
+  .sentiment-bar {
+    height: 8px;
+    border-radius: 4px;
+    background: var(--border);
+    overflow: hidden;
+    display: flex;
+  }
+
+  .bar-bull { background: var(--bull); transition: width 0.6s ease; }
+  .bar-neu  { background: var(--muted); transition: width 0.6s ease; }
+  .bar-bear { background: var(--bear); transition: width 0.6s ease; }
+
+  /* ── News feed ── */
+  .news-item {
+    padding: 0.9rem 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .news-item:last-child { border-bottom: none; }
+
+  .news-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+
+  .badge-bullish { background: rgba(0,255,136,0.12); color: var(--bull); }
+  .badge-bearish { background: rgba(255,68,102,0.12); color: var(--bear); }
+  .badge-neutral { background: rgba(90,90,114,0.2);   color: var(--muted); }
+
+  .news-headline {
+    font-size: 0.82rem;
+    line-height: 1.4;
+    color: var(--text);
+  }
+
+  .news-meta {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    margin-top: 0.25rem;
+  }
+
+  /* ── Fundamentals table ── */
+  .fund-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+  }
+
+  .fund-table th {
+    text-align: left;
+    color: var(--muted);
+    font-weight: 400;
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: 0.06em;
+  }
+
+  .fund-table td {
+    padding: 0.6rem 0.6rem;
+    border-bottom: 1px solid rgba(30,30,46,0.5);
+    color: var(--text);
+  }
+
+  .fund-table tr:hover td { background: rgba(0,255,136,0.03); }
+
+  .ticker-tag {
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  /* ── Chart canvas ── */
+  .chart-wrap {
+    position: relative;
+    height: 220px;
+  }
+
+  /* ── Loading state ── */
+  .loading {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-align: center;
+    padding: 2rem;
+    letter-spacing: 0.1em;
+  }
+
+  /* ── Score indicator ── */
+  .vader-score {
+    font-family: 'DM Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 500;
+  }
+
+  .score-pos { color: var(--bull); }
+  .score-neg { color: var(--bear); }
+  .score-neu { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-title">Market <span>Sentiment</span> Pulse</div>
+    <div class="logo-sub">AI / Tech Stocks</div>
+  </div>
+  <div class="live-badge">
+    <div class="live-dot"></div>
+    LIVE DATA
+  </div>
+</header>
+
+<main>
+
+  <!-- Stat cards -->
+  <div class="stats-row" id="stats-row">
+    <div class="stat-card bull">
+      <div class="stat-label">Bullish signals</div>
+      <div class="stat-value" id="stat-bull">—</div>
+      <div class="stat-sub">news articles</div>
+    </div>
+    <div class="stat-card bear">
+      <div class="stat-label">Bearish signals</div>
+      <div class="stat-value" id="stat-bear">—</div>
+      <div class="stat-sub">news articles</div>
+    </div>
+    <div class="stat-card neu">
+      <div class="stat-label">Avg VADER score</div>
+      <div class="stat-value" id="stat-vader">—</div>
+      <div class="stat-sub">−1.0 bearish → +1.0 bullish</div>
+    </div>
+    <div class="stat-card info">
+      <div class="stat-label">Avg P/E ratio</div>
+      <div class="stat-value" id="stat-pe">—</div>
+      <div class="stat-sub">across 10 tickers</div>
+    </div>
+  </div>
+
+  <!-- Ticker selector + price chart + sentiment donut -->
+  <div class="grid-2">
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Price history — 30 days</div>
+      </div>
+      <div class="ticker-pills" id="ticker-pills"></div>
+      <div class="chart-wrap">
+        <canvas id="price-chart"></canvas>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Sentiment breakdown</div>
+        <div class="pill active" id="selected-ticker-label">NVDA</div>
+      </div>
+      <div class="chart-wrap" style="height:160px">
+        <canvas id="sentiment-donut"></canvas>
+      </div>
+      <div id="sentiment-bar-wrap" style="margin-top:1rem"></div>
+    </div>
+
+  </div>
+
+  <!-- News feed + Fundamentals table -->
+  <div class="grid-2">
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Latest news — VADER scored</div>
+      </div>
+      <div id="news-feed"><div class="loading">Loading...</div></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Fundamentals snapshot</div>
+      </div>
+      <div id="fund-table-wrap"><div class="loading">Loading...</div></div>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+const TICKERS = ["NVDA","MSFT","GOOGL","META","AAPL","AMZN","AMD","TSLA","PLTR","ORCL"];
+let activeTicker = "NVDA";
+let priceChart, donutChart;
+
+// ── Fetch helpers ──────────────────────────────────────────────────────────
+
+async function get(url) {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; }
+}
+
+// ── Overview cards ────────────────────────────────────────────────────────
+
+async function loadOverview() {
+  const d = await get("/api/overview");
+  if (!d) return;
+
+  document.getElementById("stat-bull").textContent  = d.bullish.toLocaleString();
+  document.getElementById("stat-bear").textContent  = d.bearish.toLocaleString();
+
+  const vader = d.avg_vader ?? 0;
+  const vaderEl = document.getElementById("stat-vader");
+  vaderEl.textContent = vader.toFixed(3);
+  vaderEl.className = "stat-value " + (vader > 0.05 ? "score-pos" : vader < -0.05 ? "score-neg" : "score-neu");
+
+  document.getElementById("stat-pe").textContent = d.avg_pe ?? "—";
+}
+
+// ── Ticker pills ──────────────────────────────────────────────────────────
+
+function buildPills() {
+  const wrap = document.getElementById("ticker-pills");
+  wrap.innerHTML = TICKERS.map(t =>
+    `<button class="pill ${t === activeTicker ? 'active' : ''}" onclick="selectTicker('${t}')">${t}</button>`
+  ).join("");
+}
+
+async function selectTicker(ticker) {
+  activeTicker = ticker;
+  document.getElementById("selected-ticker-label").textContent = ticker;
+  buildPills();
+  await Promise.all([loadPriceChart(ticker), loadSentiment(ticker)]);
+}
+
+// ── Price chart ───────────────────────────────────────────────────────────
+
+async function loadPriceChart(ticker) {
+  const d = await get(`/api/price/${ticker}`);
+  if (!d) return;
+
+  const ctx = document.getElementById("price-chart").getContext("2d");
+  if (priceChart) priceChart.destroy();
+
+  priceChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: d.dates,
+      datasets: [
+        {
+          label: "Close",
+          data: d.close,
+          borderColor: "#00ff88",
+          borderWidth: 2,
+          pointRadius: 0,
+          tension: 0.3,
+          fill: true,
+          backgroundColor: "rgba(0,255,136,0.05)",
+        },
+        {
+          label: "MA 5",
+          data: d.ma_5,
+          borderColor: "#ffaa00",
+          borderWidth: 1,
+          borderDash: [4,3],
+          pointRadius: 0,
+          tension: 0.3,
+        },
+        {
+          label: "MA 20",
+          data: d.ma_20,
+          borderColor: "#6688ff",
+          borderWidth: 1,
+          borderDash: [4,3],
+          pointRadius: 0,
+          tension: 0.3,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: {
+            color: "#5a5a72",
+            font: { family: "DM Mono", size: 10 },
+            boxWidth: 16,
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: "#5a5a72",
+            font: { family: "DM Mono", size: 9 },
+            maxTicksLimit: 6,
+          },
+          grid: { color: "rgba(30,30,46,0.8)" },
+        },
+        y: {
+          ticks: {
+            color: "#5a5a72",
+            font: { family: "DM Mono", size: 9 },
+          },
+          grid: { color: "rgba(30,30,46,0.8)" },
+        },
+      },
+    },
+  });
+}
+
+// ── Sentiment donut ───────────────────────────────────────────────────────
+
+async function loadSentiment(ticker) {
+  const d = await get(`/api/sentiment/${ticker}`);
+  if (!d) return;
+
+  const ctx = document.getElementById("sentiment-donut").getContext("2d");
+  if (donutChart) donutChart.destroy();
+
+  donutChart = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: ["Bullish", "Neutral", "Bearish"],
+      datasets: [{
+        data: [d.bullish, d.neutral, d.bearish],
+        backgroundColor: ["#00ff88", "#2a2a3e", "#ff4466"],
+        borderWidth: 0,
+        hoverOffset: 4,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: "72%",
+      plugins: {
+        legend: {
+          position: "right",
+          labels: {
+            color: "#5a5a72",
+            font: { family: "DM Mono", size: 10 },
+            boxWidth: 10,
+          },
+        },
+      },
+    },
+  });
+
+  // Sentiment bar
+  const total = d.bullish + d.neutral + d.bearish || 1;
+  const bp = (d.bullish / total * 100).toFixed(0);
+  const np = (d.neutral / total * 100).toFixed(0);
+  const brp = (d.bearish / total * 100).toFixed(0);
+  document.getElementById("sentiment-bar-wrap").innerHTML = `
+    <div class="sentiment-bar-wrap">
+      <div class="sentiment-bar-label">
+        <span style="color:var(--bull)">▲ ${bp}% bullish</span>
+        <span style="color:var(--bear)">▼ ${brp}% bearish</span>
+      </div>
+      <div class="sentiment-bar">
+        <div class="bar-bull" style="width:${bp}%"></div>
+        <div class="bar-neu"  style="width:${np}%"></div>
+        <div class="bar-bear" style="width:${brp}%"></div>
+      </div>
+    </div>
+  `;
+}
+
+// ── News feed ─────────────────────────────────────────────────────────────
+
+async function loadNews() {
+  const data = await get("/api/news");
+  const wrap = document.getElementById("news-feed");
+  if (!data || !data.length) { wrap.innerHTML = '<div class="loading">No news data</div>'; return; }
+
+  wrap.innerHTML = data.map(a => {
+    const label = a.vader_label || "neutral";
+    const score = (a.vader_compound ?? 0).toFixed(3);
+    const tickers = (a.tickers_mentioned || []).join(", ") || "—";
+    const date = (a.published_at || "").slice(0, 10);
+    return `
+      <div class="news-item">
+        <span class="news-badge badge-${label}">${label.toUpperCase()}</span>
+        <div>
+          <div class="news-headline">${a.headline || "—"}</div>
+          <div class="news-meta">${tickers} · ${a.source || ""} · ${date} · score: ${score}</div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+// ── Fundamentals table ────────────────────────────────────────────────────
+
+async function loadFundamentals() {
+  const data = await get("/api/fundamentals");
+  const wrap = document.getElementById("fund-table-wrap");
+  if (!data || !data.length) { wrap.innerHTML = '<div class="loading">No data</div>'; return; }
+
+  const fmt = (v, prefix = "") =>
+    v == null ? "—" :
+    prefix === "$T" ? `$${(v / 1e12).toFixed(2)}T` :
+    prefix === "$B" ? `$${(v / 1e9).toFixed(1)}B` :
+    `${prefix}${Number(v).toFixed(1)}`;
+
+  wrap.innerHTML = `
+    <table class="fund-table">
+      <thead>
+        <tr>
+          <th>Ticker</th>
+          <th>P/E</th>
+          <th>Mkt Cap</th>
+          <th>52W High</th>
+          <th>Target</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${data.map(r => `
+          <tr>
+            <td class="ticker-tag">${r.ticker}</td>
+            <td>${fmt(r.pe_ratio)}</td>
+            <td>${r.market_cap > 1e12 ? fmt(r.market_cap, "$T") : fmt(r.market_cap, "$B")}</td>
+            <td>$${fmt(r.fifty_two_week_high)}</td>
+            <td>$${fmt(r.analyst_target_price)}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+
+async function init() {
+  buildPills();
+  await Promise.all([
+    loadOverview(),
+    loadPriceChart(activeTicker),
+    loadSentiment(activeTicker),
+    loadNews(),
+    loadFundamentals(),
+  ]);
+}
+
+init();
+</script>
+</body>
+</html>
