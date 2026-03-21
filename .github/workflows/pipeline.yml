@@ -1,0 +1,49 @@
+name: Sentiment Pulse Pipeline
+
+on:
+  schedule:
+    # Run every weekday at 9am IST (3:30am UTC)
+    - cron: '30 3 * * 1-5'
+  workflow_dispatch:  # allows manual trigger from GitHub UI
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyarrow feedparser
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Create data directories
+        run: |
+          mkdir -p data/raw
+          mkdir -p data/cleaned
+
+      - name: Run full pipeline
+        env:
+          ALPHAVANTAGE_API_KEY: ${{ secrets.ALPHAVANTAGE_API_KEY }}
+          MONGO_URI:            ${{ secrets.MONGO_URI }}
+          MONGO_DB:             ${{ secrets.MONGO_DB }}
+          POSTGRES_URI:         ${{ secrets.POSTGRES_URI }}
+        run: python main.py
+
+      - name: Upload raw data as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pipeline-output-${{ github.run_id }}
+          path: data/
+          retention-days: 7
