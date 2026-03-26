@@ -107,10 +107,12 @@ class AlphaVantageSentimentScraper:
         self.session        = requests.Session()
         self.session.headers.update(HEADERS)
 
-        if not API_KEY:
+        # Read fresh at init so GitHub Actions env vars are always picked up
+        self.api_key = os.environ.get("ALPHAVANTAGE_API_KEY") or API_KEY
+        if not self.api_key:
             raise ValueError(
-                "ALPHAVANTAGE_API_KEY not found in .env — "
-                "get a free key at alphavantage.co/support/#api-key"
+                "ALPHAVANTAGE_API_KEY not found — "
+                "set it in .env locally or as a GitHub Actions secret"
             )
 
     def _fetch_ticker(self, ticker: str) -> list[dict]:
@@ -119,7 +121,7 @@ class AlphaVantageSentimentScraper:
             "function": "NEWS_SENTIMENT",
             "tickers":  ticker,
             "limit":    self.max_per_ticker,
-            "apikey":   API_KEY,
+            "apikey":   self.api_key,
         }
 
         try:
